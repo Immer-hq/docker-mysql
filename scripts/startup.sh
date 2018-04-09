@@ -1,5 +1,12 @@
 #!/bin/sh
 
+# Update mysql config
+BUFFER_SIZE=${BUFFER_SIZE:-"64"}
+LOG_SIZE=`node -e "process.stdout.write(''+Math.ceil($BUFFER_SIZE / 4))"`
+sed -i "s/innodb_buffer_pool_size = 64M/innodb_buffer_pool_size = ${BUFFER_SIZE}M/g" /etc/mysql/my.cnf
+sed -i "s/innodb_log_file_size = 16M/innodb_log_file_size = ${LOG_SIZE}M/g" /etc/mysql/my.cnf
+sed -i "s/innodb_log_buffer_size = 16M/innodb_log_file_size = ${LOG_SIZE}M/g" /etc/mysql/my.cnf
+
 if [ -d /run/mysqld ]; then
   echo "[i] MySQL directory already present, skipping creation"
 else
