@@ -1,4 +1,17 @@
 #!/bin/bash
 
-wait-port -t 60000 localhost:3306
-gunzip -c /backup/mysql.sql.gz | mysql $MYSQL_DATABASE
+if [ -z "$SKIP_BACKUP" ]; then
+  wait-port -t 60000 localhost:3306
+
+  for i in $(echo $MYSQL_DATABASE | sed "s/,/ /g")
+  do
+    if [ -r "/backup/$i.sql.gz" ]; then
+      gunzip -c /backup/$i.sql.gz | mysql $i
+    else
+      # Old backup scripts writes to mysql.sql.gz.
+      if [ -r "/backup/mysql.sql.gz" ]; then
+        gunzip -c /backup/mysql.sql.gz | mysql $i
+      fi
+    fi
+  done
+fi
