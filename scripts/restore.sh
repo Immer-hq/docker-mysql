@@ -7,11 +7,6 @@ if [ -z "$SKIP_BACKUP" ]; then
   do
     if [ -r "/backup/$i.sql.gz" ]; then
       gunzip -c /backup/$i.sql.gz | mysql $i
-    else
-      # Old backup scripts writes to mysql.sql.gz.
-      if [ -r "/backup/mysql.sql.gz" ]; then
-        gunzip -c /backup/mysql.sql.gz | mysql $i
-      fi
     fi
   done
 fi
