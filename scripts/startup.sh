@@ -1,5 +1,64 @@
 #!/bin/sh
 
+MYSQL_USER=${MYSQL_USER:-"username"}
+MYSQL_PASSWORD=${MYSQL_PASSWORD:-"password"}
+MYSQL_DATABASE=${MYSQL_DATABASE:-"db"}
+
+mkdir -p /var/lib/mysql/
+mkdir -p /var/run/mysqld
+mkdir -p /var/log/mysql
+
+chown -Rf mysql:mysql /var/lib/mysql
+chown -Rf mysql:mysql /var/log/mysql
+chown -Rf mysql:mysql /var/run/mysqld
+
+if [ ! -f /var/lib/mysql/ibdata1 ]; then
+
+  echo "Setting up database"
+
+  /usr/bin/mysql_install_db --datadir=/var/lib/mysql/ --user=mysql 2> /dev/null
+  /usr/bin/mysqld_safe --defaults-file=/etc/mysql/my.cnf --datadir=/var/lib/mysql/ --user=mysql  &
+  c=1
+  while [[ $c -le 10 ]]
+  do
+    echo 'SELECT 1' | /usr/bin/mysql &> /dev/null
+    if [ $? -eq 0 ]; then
+      break
+    fi
+    echo "."
+    sleep 1
+    let c=c+1
+  done
+
+  if [ $c -eq 11 ]; then
+    echo "database failed to start"
+    exit 1
+  fi
+  if [ ! -z $MYSQL_DATABASE ]; then
+    for i in $(echo $MYSQL_DATABASE | sed "s/,/ /g")
+    do
+      echo "Creating database $i"
+      echo "CREATE DATABASE IF NOT EXISTS $i ;" | /usr/bin/mysql
+    done
+  fi
+
+  if [ ! -z $MYSQL_USER ]; then
+    echo "Creating user $MYSQL_USER"
+    echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;FLUSH PRIVILEGES;" | /usr/bin/mysql
+    echo "CREATE USER '$MYSQL_USER'@'localhost' IDENTIFIED BY '$MYSQL_PASSWORD' ;FLUSH PRIVILEGES;" | /usr/bin/mysql
+    if [ ! -z $MYSQL_DATABASE ]; then
+      for i in $(echo $MYSQL_DATABASE | sed "s/,/ /g")
+      do
+        echo "Granting access for $MYSQL_USER to $i"
+        echo "GRANT ALL ON $i.* TO '$MYSQL_USER'@'%' ;FLUSH PRIVILEGES;" | /usr/bin/mysql
+        echo "GRANT ALL ON $i.* TO '$MYSQL_USER'@'localhost' ;FLUSH PRIVILEGES;" | /usr/bin/mysql
+      done
+    fi
+  fi
+
+  /usr/bin/mysqladmin shutdown
+fi
+
 # Update mysql config
 BUFFER_SIZE=${BUFFER_SIZE:-"64"}
 LOG_SIZE=`node -e "process.stdout.write(''+Math.ceil($BUFFER_SIZE / 4))"`
@@ -7,52 +66,5 @@ sed -i "s/innodb_buffer_pool_size = 64M/innodb_buffer_pool_size = ${BUFFER_SIZE}
 sed -i "s/innodb_log_file_size = 16M/innodb_log_file_size = ${LOG_SIZE}M/g" /etc/mysql/my.cnf
 sed -i "s/innodb_log_buffer_size = 16M/innodb_log_file_size = ${LOG_SIZE}M/g" /etc/mysql/my.cnf
 
-if [ -d /run/mysqld ]; then
-  echo "[i] MySQL directory already present, skipping creation"
-else
-  echo "[i] MySQL data directory not found, creating initial DBs"
-
-  mysql_install_db --user=root > /dev/null
-
-  if [ "$MYSQL_ROOT_PASSWORD" = "" ]; then
-    MYSQL_ROOT_PASSWORD=`date | sha256sum | base64 | head -c 32`
-  fi
-
-  MYSQL_DATABASE=${MYSQL_DATABASE:-""}
-  MYSQL_USER=${MYSQL_USER:-"username"}
-  MYSQL_PASSWORD=${MYSQL_PASSWORD:-"password"}
-
-  if [ ! -d "/run/mysqld" ]; then
-    mkdir -p /run/mysqld
-  fi
-
-  tfile=`mktemp`
-  if [ ! -f "$tfile" ]; then
-      return 1
-  fi
-
-  cat << EOF > $tfile
-USE mysql;
-FLUSH PRIVILEGES;
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY "$MYSQL_ROOT_PASSWORD" WITH GRANT OPTION;
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
-UPDATE user SET password=PASSWORD("") WHERE user='root' AND host='localhost';
-EOF
-
-  if [ "$MYSQL_DATABASE" != "" ]; then
-
-    for i in $(echo $MYSQL_DATABASE | sed "s/,/ /g")
-    do
-      echo "$i"
-      echo "[i] Creating database: $i"
-      echo "CREATE DATABASE IF NOT EXISTS \`$i\` CHARACTER SET utf8 COLLATE utf8_general_ci;" >> $tfile
-      echo "GRANT ALL ON \`$i\`.* to '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD';" >> $tfile
-    done
-
-  fi
-
-  /usr/bin/mysqld --user=root --bootstrap --verbose=0 < $tfile
-  rm -f $tfile
-fi
-
-exec /usr/bin/mysqld --user=root --console
+# Start server
+exec /usr/bin/mysqld --basedir=/usr --datadir=/var/lib/mysql/ --plugin-dir=/usr/lib/mysql/plugin --user=mysql --console --log-error=/var/log/mysql/mysql.err --pid-file=/var/run/mysqld/mysqld.pid --socket=/var/run/mysqld/mysqld.sock --port=3306

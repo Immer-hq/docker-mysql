@@ -1,5 +1,7 @@
 #!/bin/bash
 
+MYSQL_DATABASE=${MYSQL_DATABASE:-"db"}
+
 if [ -z "$SKIP_BACKUP" ]; then
   wait-port -t 60000 localhost:3306
 

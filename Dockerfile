@@ -1,10 +1,11 @@
-FROM alpine:3.7
+FROM alpine:3.9
 
-RUN apk add --update mysql mysql-client nodejs \
- && rm -f /var/cache/apk/* \
- && npm install -g wait-port
+RUN apk add --update mariadb mariadb-client nodejs nodejs-npm \
+ && npm install -g wait-port \
+ && apk del nodejs-npm \
+ && rm -f /var/cache/apk/*
 
-COPY my.cnf /etc/mysql/my.cnf
+COPy my.cnf /etc/mysql/
 COPY scripts/ /var/scripts/
 
 LABEL flush="sh /var/scripts/flush.sh" \
