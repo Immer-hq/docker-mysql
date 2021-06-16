@@ -16,7 +16,7 @@ if [ ! -f /var/lib/mysql/ibdata1 ]; then
 
   echo "Setting up database"
 
-  /usr/bin/mysql_install_db --datadir=/var/lib/mysql/ --user=mysql 2> /dev/null
+  /usr/bin/mysql_install_db --datadir=/var/lib/mysql/ --user=mysql --auth-root-authentication-method=normal 2> /dev/null
   /usr/bin/mysqld_safe --defaults-file=/etc/mysql/my.cnf --datadir=/var/lib/mysql/ --user=mysql  &
   c=1
   while [[ $c -le 10 ]]
