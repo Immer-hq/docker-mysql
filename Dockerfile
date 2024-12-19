@@ -5,7 +5,7 @@ RUN apk add --update mariadb mariadb-client nodejs nodejs-npm \
  && apk del nodejs-npm \
  && rm -f /var/cache/apk/*
 
-COPy my.cnf /etc/mysql/
+COPY my.cnf /etc/mysql/
 COPY scripts/ /var/scripts/
 
 LABEL flush="sh /var/scripts/flush.sh" \
