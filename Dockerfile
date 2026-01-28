@@ -1,8 +1,8 @@
-FROM alpine:3.9
+FROM alpine:3.23
 
-RUN apk add --update mariadb mariadb-client nodejs nodejs-npm \
+RUN apk add --update mariadb mariadb-client nodejs npm \
  && npm install -g wait-port \
- && apk del nodejs-npm \
+ && apk del npm \
  && rm -f /var/cache/apk/*
 
 COPY my.cnf /etc/mysql/

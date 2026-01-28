@@ -67,4 +67,4 @@ sed -i "s/innodb_log_file_size = 16M/innodb_log_file_size = ${LOG_SIZE}M/g" /etc
 sed -i "s/innodb_log_buffer_size = 16M/innodb_log_file_size = ${LOG_SIZE}M/g" /etc/mysql/my.cnf
 
 # Start server
-exec /usr/bin/mysqld --basedir=/usr --datadir=/var/lib/mysql/ --plugin-dir=/usr/lib/mysql/plugin --user=mysql --console --log-error=/var/log/mysql/mysql.err --pid-file=/var/run/mysqld/mysqld.pid --socket=/var/run/mysqld/mysqld.sock --port=3306
+exec /usr/bin/mariadbd --basedir=/usr --datadir=/var/lib/mysql/ --plugin-dir=/usr/lib/mysql/plugin --user=mysql --console --log-error=/var/log/mysql/mysql.err --pid-file=/var/run/mysqld/mysqld.pid --socket=/var/run/mysqld/mysqld.sock --port=3306
